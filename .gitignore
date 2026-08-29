@@ -1,0 +1,109 @@
+# ─────────────────────────────────────────────
+#  OceanEmbed – .gitignore
+# ─────────────────────────────────────────────
+
+# ── Python ────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# ── Virtual environments ──────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ── Jupyter ───────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Large / binary data files ─────────────────
+# NumPy arrays & archives (can be huge)
+*.npy
+*.npz
+*.nc          # NetCDF ocean/climate data
+*.nc4
+*.h5
+*.hdf5
+*.grb
+*.grb2
+*.grib
+*.grib2
+*.zarr/
+*.tif
+*.tiff
+*.csv         # large CSVs; remove this line if you want small CSVs tracked
+*.parquet
+*.feather
+*.pkl
+*.pickle
+
+# ── Model checkpoints / weights ───────────────
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+checkpoints/
+runs/
+wandb/
+mlruns/
+lightning_logs/
+
+# ── Output / processed data directories ───────
+data/raw/
+data/processed/
+data/interim/
+data/external/
+data/dummy/
+outputs/
+results/
+
+# ── CDS / Copernicus credentials ──────────────
+.cdsapirc
+*.cds
+
+# ── Logs ──────────────────────────────────────
+*.log
+logs/
+*.out
+
+# ── IDE / editor ──────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.komodo/
+.kombai/        # Kombai AI tool folder
+
+# ── OS junk ───────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ── Secrets / credentials ─────────────────────
+.env
+*.pem
+*.key
+secrets.yaml
+secrets.yml
+config/secrets*
+
+# ── Coverage / testing ────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
