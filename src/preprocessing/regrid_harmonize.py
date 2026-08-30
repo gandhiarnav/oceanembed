@@ -112,6 +112,19 @@ def align_time_coordinate(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
+def validate_regridded_shape(ds: xr.Dataset, label: str) -> None:
+    """Abort if the regridded dataset does not match the 101x241 contract."""
+    n_lat = len(ds["lat"]) if "lat" in ds.dims else len(ds["latitude"])
+    n_lon = len(ds["lon"]) if "lon" in ds.dims else len(ds["longitude"])
+    if n_lat != 101 or n_lon != 241:
+        print(f"\n  ❌ ABORT: Shape mismatch in '{label}'!")
+        print(f"     Expected : lat=101, lon=241")
+        print(f"     Got      : lat={n_lat}, lon={n_lon}")
+        print("     Check LAT_TARGET / LON_TARGET ranges in this script.")
+        sys.exit(1)
+    print(f"       Grid check ✅ {label}: lat={n_lat}, lon={n_lon}")
+
+
 # ── Collect and harmonize all surface datasets ────────────────────────────────
 surface_datasets = []
 
@@ -179,7 +192,10 @@ if surface_datasets:
     print("\n  Merging surface variables into single dataset...")
     # Merge along common dimensions (time, lat, lon)
     ds_surface_merged = xr.merge(surface_datasets, compat="override", join="inner")
-    
+
+    # ── Validate merged grid shape before saving ───────────────────────────
+    validate_regridded_shape(ds_surface_merged, "surface_inputs_merged")
+
     out_surf_path = os.path.join(PROCESSED_DIR, "surface_inputs_regridded.nc")
     ds_surface_merged.to_netcdf(out_surf_path)
     print(f"  ✅ Saved unified surface file: {out_surf_path}")
@@ -199,10 +215,18 @@ if os.path.exists(target_file):
     depth_dim = "depth" if "depth" in ds_tgt_reg.dims else "deptht"
     ds_tgt_depths = ds_tgt_reg.sel({depth_dim: STANDARD_DEPTHS}, method="nearest")
 
+    # ── Validate target grid shape before saving ───────────────────────────
+    validate_regridded_shape(ds_tgt_depths, "target_temp_regridded")
+    n_depths = len(ds_tgt_depths[depth_dim])
+    if n_depths != 15:
+        print(f"\n  ❌ ABORT: Expected 15 depth levels, got {n_depths}")
+        sys.exit(1)
+    print(f"       Depth check ✅ target_temp: {n_depths} levels")
+
     out_tgt_path = os.path.join(PROCESSED_DIR, "target_temp_regridded.nc")
     ds_tgt_depths.to_netcdf(out_tgt_path)
     print(f"  ✅ Saved target file: {out_tgt_path}")
-    print(f"     Depth levels: {len(ds_tgt_depths[depth_dim])} levels extracted")
+    print(f"     Depth levels: {n_depths} levels extracted")
     print(f"     Dimensions  : {dict(ds_tgt_depths.dims)}")
 else:
     print(f"\n  ⚠️  GLORYS target file not found: {target_file}")

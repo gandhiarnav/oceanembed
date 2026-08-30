@@ -95,6 +95,23 @@ for idx, (cname, vname) in enumerate(active_channels):
     print(f"    Ch {idx}: {cname:8s} (from '{vname}')")
 print()
 
+# ── STRICT CHANNEL GUARD ──────────────────────────────────────────────────────
+# The model contract requires exactly 7 channels.
+# Abort early rather than silently producing a wrong-shaped tensor.
+if len(active_channels) != len(CANONICAL_CHANNELS):
+    missing = [c for c, _ in CANONICAL_CHANNELS if c not in [a for a, _ in active_channels]]
+    print("\n  ❌ ABORT: Missing channels detected!")
+    print(f"     Required : {len(CANONICAL_CHANNELS)} channels")
+    print(f"     Found    : {len(active_channels)} channels")
+    print(f"     Missing  : {missing}")
+    print("     Ensure all source files are downloaded before running this script:")
+    print("       - data/raw/glorys_surface_inputs_jan2020.nc  (SST, SSH, U_curr, V_curr)")
+    print("       - data/raw/sss_merged_jan2020.nc             (SSS)")
+    print("       - data/raw/era5_winds_jan2020.nc             (U_wind, V_wind)")
+    sys.exit(1)
+
+print("  ✅ All 7 required channels found. Proceeding...\n")
+
 n_times = len(ds_surf.time)
 n_lat   = len(ds_surf.lat)
 n_lon   = len(ds_surf.lon)
@@ -157,10 +174,45 @@ if os.path.exists(target_path):
 else:
     print(f"\n  ⚠️  Target file not found: {target_path}")
 
+# ── FINAL FORMAT VERIFICATION ────────────────────────────────────────────────
+# Confirm output tensors match the dummy data / model contract exactly.
+EXPECTED_INPUTS_SHAPE  = (n_times, 7, 101, 241)
+EXPECTED_TARGETS_SHAPE = (n_times, 15, 101, 241)
+
 print("\n" + "=" * 65)
-print("  ✅ Processing Complete!")
-print(f"     Inputs  shape : {inputs.shape}")
+print("  FORMAT VERIFICATION (vs SIH-26066 / dummy data contract)")
+print("=" * 65)
+
+checks = []
+
+# Inputs
+shape_ok = inputs.shape == EXPECTED_INPUTS_SHAPE
+dtype_ok = inputs.dtype == np.float32
+nan_ok   = np.isnan(inputs).sum() == 0
+checks.append(("Inputs shape",  shape_ok,  f"{inputs.shape}  (expected {EXPECTED_INPUTS_SHAPE})"))
+checks.append(("Inputs dtype",  dtype_ok,  f"{inputs.dtype}"))
+checks.append(("Inputs no NaN", nan_ok,    f"{np.isnan(inputs).sum()} NaNs"))
+
+# Targets
 if os.path.exists(target_path):
-    print(f"     Targets shape : {targets.shape}")
-print(f"     Mask shape    : {ocean_mask.shape}")
+    tgt_shape_ok = targets.shape == EXPECTED_TARGETS_SHAPE
+    tgt_dtype_ok = targets.dtype == np.float32
+    tgt_nan_ok   = np.isnan(targets).sum() == 0
+    checks.append(("Targets shape",  tgt_shape_ok, f"{targets.shape}  (expected {EXPECTED_TARGETS_SHAPE})"))
+    checks.append(("Targets dtype",  tgt_dtype_ok, f"{targets.dtype}"))
+    checks.append(("Targets no NaN", tgt_nan_ok,   f"{np.isnan(targets).sum()} NaNs"))
+
+all_passed = True
+for label, passed, detail in checks:
+    icon = "✅" if passed else "❌"
+    print(f"  {icon} {label:<20}: {detail}")
+    if not passed:
+        all_passed = False
+
+print("=" * 65)
+if all_passed:
+    print("  ✅ ALL CHECKS PASSED — Output matches model contract!")
+else:
+    print("  ❌ SOME CHECKS FAILED — Review the issues above before training.")
+    sys.exit(1)
 print("=" * 65)
