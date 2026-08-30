@@ -2,6 +2,11 @@
 #  OceanEmbed – .gitignore
 # ─────────────────────────────────────────────
 
+# ── Credentials (NEVER commit these) ──────────
+.env
+*.env
+.netrc
+
 # ── Python ────────────────────────────────────
 __pycache__/
 *.py[cod]

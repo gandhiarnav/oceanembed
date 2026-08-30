@@ -33,7 +33,11 @@ Run:
 
 import numpy as np
 import os
+import sys
 import pandas as pd
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # ── Grid Definition ───────────────────────────────────────────────────────────
 LAT   = np.arange(5.0, 30.25, 0.25)     # 101 latitude points
