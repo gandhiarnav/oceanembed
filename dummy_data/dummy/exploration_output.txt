@@ -1,0 +1,56 @@
+==================================================
+       OCEANEMBED DATASET EXPLORATION
+==================================================
+
+1. GRID SPATIAL & TEMPORAL DETAILS:
+   Latitude range:  5.00°N to 30.00°N | count = 101 | resolution = 0.25°
+   Longitude range: 45.00°E to 105.00°E | count = 241 | resolution = 0.25°
+   Time coverage:   2020-01-01 to 2020-12-30 | total days = 365
+   Depths (15 levels in meters): [np.int64(0), np.int64(5), np.int64(10), np.int64(20), np.int64(30), np.int64(50), np.int64(75), np.int64(100), np.int64(125), np.int64(150), np.int64(200), np.int64(300), np.int64(500), np.int64(700), np.int64(1000)]
+
+2. DATASET SHAPES & TYPES:
+   dummy_inputs.npy:  shape = (365, 7, 101, 241), dtype = float32
+   dummy_targets.npy: shape = (365, 15, 101, 241), dtype = float32
+   dummy_dates.npy:   shape = (365,), range = 2020-01-01 to 2020-12-30
+
+3. INPUT CHANNELS SUMMARY:
+Idx  Channel Name Min        Max        Mean       Std        NaN Count 
+------------------------------------------------------------------
+0    SST          20.0000    33.0000    26.5001    3.7529     0         
+1    SSS          30.0000    38.0000    34.0007    2.3084     0         
+2    SSH/SLA      -0.5000    0.5000     0.0001     0.2887     0         
+3    U_curr       -1.5000    1.5000     -0.0006    0.8659     0         
+4    V_curr       -1.5000    1.5000     -0.0001    0.8660     0         
+5    U_wind       -15.0000   15.0000    -0.0032    8.6607     0         
+6    V_wind       -15.0000   15.0000    -0.0005    8.6613     0         
+
+4. SUBSURFACE TARGET TEMPERATURE (PER DEPTH LEVEL):
+Idx  Depth(m)   Min (°C)   Max (°C)   Mean (°C)  Std (°C)   NaN Count 
+----------------------------------------------------------------------
+0    0          25.1571    30.5542    27.9998    0.5002     0         
+1    5          25.1511    30.3238    27.7610    0.5003     0         
+2    10         24.7723    30.2418    27.5247    0.5001     0         
+3    20         24.4329    29.5950    27.0588    0.5001     0         
+4    30         23.9612    29.3897    26.6026    0.5000     0         
+5    50         22.8219    28.2386    25.7162    0.5000     0         
+6    75         22.0580    27.3034    24.6569    0.5000     0         
+7    100        21.1033    26.1564    23.6495    0.5002     0         
+8    125        19.8144    25.3924    22.6915    0.5000     0         
+9    150        19.1447    24.2852    21.7796    0.5002     0         
+10   200        17.4705    22.6383    20.0876    0.5001     0         
+11   300        14.5940    19.7289    17.1713    0.5000     0         
+12   500        10.1490    15.3408    12.8289    0.4998     0         
+13   700        7.2570     12.5268    9.9182     0.5003     0         
+14   1000       4.6300     10.1705    7.2483     0.5000     0         
+
+==================================================
+5. SIH PROBLEM STATEMENT #26066 VERIFICATION:
+==================================================
+ [✓] Spatial Resolution:  0.25° x 0.25° (Lat step = 0.25°, Lon step = 0.25°)
+ [✓] Spatial Bounds:      5°N-30°N (5.0°N to 30.0°N), 45°E-105°E (45.0°E to 105.0°E)
+ [✓] Temporal Resolution: Daily (365 days)
+ [✓] Input Variables:     7 channels [SST, SSS, SSH/SLA, U_curr, V_curr, U_wind, V_wind]
+ [✓] Target Variable:    15 depth levels (0m to 1000m depth profiles)
+ [✓] Data Integrity:     No NaNs, correctly formatted float32 tensors ready for DL training.
+==================================================
+
