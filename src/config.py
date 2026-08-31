@@ -57,3 +57,8 @@ CANONICAL_CHANNELS = [
 ]
 
 CHANNEL_NAMES = [name for name, _ in CANONICAL_CHANNELS]
+
+# Default temporal train / validation / test splits
+DEFAULT_TRAIN_RATIO = 0.70
+DEFAULT_VAL_RATIO = 0.15
+DEFAULT_TEST_RATIO = 0.15
