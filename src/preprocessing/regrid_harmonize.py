@@ -225,24 +225,39 @@ def harmonize_all_sources(
     if target_files:
         print(f"\n  [4] Processing GLORYS 3D Target Temperature from {target_files[0].name}...")
         ds_tgt = xr.open_dataset(target_files[0])
-        ds_tgt_reg = regrid_to_target(ds_tgt)
+        depth_dim = "depth" if "depth" in ds_tgt.dims else "deptht"
+
+        # 1D Vertical interpolation to exact target depth levels (bounded [0.0 to ~1062m])
+        print(f"        Interpolating vertically to exact depths: {TARGET_DEPTHS}")
+        native_depths = ds_tgt[depth_dim].values
+        if native_depths[0] > 0.0:
+            surface_slice = ds_tgt.isel({depth_dim: 0}).assign_coords({depth_dim: 0.0})
+            ds_tgt_padded = xr.concat([surface_slice, ds_tgt], dim=depth_dim)
+        else:
+            ds_tgt_padded = ds_tgt
+
+        ds_tgt_interp = ds_tgt_padded.interp(
+            {depth_dim: TARGET_DEPTHS},
+            method="linear"
+        )
+
+        # 2D Spatial regridding to target 0.25° grid
+        ds_tgt_reg = regrid_to_target(ds_tgt_interp)
         ds_tgt_reg = align_time_coordinate(ds_tgt_reg)
+        ds_tgt_reg = ds_tgt_reg.transpose("time", depth_dim, "lat", "lon")
 
-        depth_dim = "depth" if "depth" in ds_tgt_reg.dims else "deptht"
-        ds_tgt_depths = ds_tgt_reg.sel({depth_dim: TARGET_DEPTHS}, method="nearest")
-
-        validate_regridded_shape(ds_tgt_depths, "target_temp_regridded")
-        n_depths = len(ds_tgt_depths[depth_dim])
+        validate_regridded_shape(ds_tgt_reg, "target_temp_regridded")
+        n_depths = len(ds_tgt_reg[depth_dim])
         if n_depths != len(TARGET_DEPTHS):
             raise ValueError(f"Expected {len(TARGET_DEPTHS)} depth levels, got {n_depths}")
 
         out_tgt_path = processed_dir / "target_temp_regridded.nc"
-        if "time" in ds_tgt_depths.coords:
-            ds_tgt_depths["time"].encoding.clear()
-        ds_tgt_depths.to_netcdf(out_tgt_path)
+        if "time" in ds_tgt_reg.coords:
+            ds_tgt_reg["time"].encoding.clear()
+        ds_tgt_reg.to_netcdf(out_tgt_path)
         print(f"  ✅ Saved target file: {out_tgt_path}")
-        print(f"     Depth levels: {n_depths} levels extracted ({TARGET_DEPTHS})")
-        print(f"     Dimensions  : {dict(ds_tgt_depths.sizes)}")
+        print(f"     Depth levels: {n_depths} levels interpolated ({TARGET_DEPTHS})")
+        print(f"     Dimensions  : {dict(ds_tgt_reg.sizes)}")
 
     print("\n" + "=" * 65)
     print("  ✅ Harmonization & Regridding complete!")
