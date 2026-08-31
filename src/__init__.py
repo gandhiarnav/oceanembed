@@ -1,1 +1,1 @@
-# OceanEmbed source package
+"""OceanEmbed / SIH Ocean ML Data Pipeline Package."""
