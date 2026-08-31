@@ -33,15 +33,21 @@ from scipy.interpolate import interp1d
 import os
 import argparse
 
-# ── Standard depth levels (must match the model output exactly) ───────────────
-STANDARD_DEPTHS = np.array([0, 5, 10, 20, 30, 50, 75, 100,
-                             125, 150, 200, 300, 500, 700, 1000])
+import sys
+from pathlib import Path
 
-# ── Grid definition ───────────────────────────────────────────────────────────
-LAT_GRID = np.arange(5.0, 30.25, 0.25)    # 101 points
-LON_GRID = np.arange(45.0, 105.25, 0.25)  # 241 points
+# Ensure project root is in sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-OUTPUT_DIR = "./data/validation"
+from src.config import TARGET_LAT, TARGET_LON, TARGET_DEPTHS, DATA_DIR
+
+STANDARD_DEPTHS = np.array(TARGET_DEPTHS)
+LAT_GRID = TARGET_LAT
+LON_GRID = TARGET_LON
+
+OUTPUT_DIR = DATA_DIR / "validation"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 

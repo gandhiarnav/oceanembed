@@ -23,8 +23,8 @@ def main():
     parser.add_argument(
         "--input-dir",
         type=str,
-        default="NASA_sst_data",
-        help="Directory containing raw CMC SST NetCDF files (default: NASA_sst_data)"
+        default=str(RAW_SST_DIR if RAW_SST_DIR.exists() else "NASA_sst_data"),
+        help="Directory containing raw CMC SST NetCDF files (default: data/raw/sst)"
     )
     parser.add_argument(
         "--output-dir",
