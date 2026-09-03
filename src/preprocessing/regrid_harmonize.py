@@ -130,29 +130,33 @@ def harmonize_all_sources(
     print(f"  Lon range   : {TARGET_LON[0]}°E to {TARGET_LON[-1]}°E")
     print()
 
-    # 1. SST: Prefer high-res processed SST (CMC satellite) or GLORYS surface
-    sst_files = sorted(list((processed_dir / "sst").glob("*.nc")))
-    if sst_files:
-        print(f"  [1a] Loading high-resolution processed SST ({len(sst_files)} files)...")
-        from src.utils.io import load_processed_variable
-        ds_sst = load_processed_variable("sst", processed_dir=processed_dir)
-        ds_sst = align_time_coordinate(ds_sst)
-        if "sst" in ds_sst:
-            surface_datasets.append(ds_sst[["sst"]])
-            print("        ✅ Processed satellite SST loaded.")
-
-    # 1b. GLORYS Surface Inputs (SSH, U/V currents, and fallback SST)
+    # 1a. GLORYS Surface Inputs (SSH, U/V currents, and baseline SST)
     glorys_surface_files = sorted(list(raw_dir.glob("*surface*.nc")))
+    ds_surf_reg = None
     if glorys_surface_files:
-        print(f"  [1b] Processing GLORYS surface inputs from {glorys_surface_files[0].name}...")
+        print(f"  [1a] Processing GLORYS surface inputs from {glorys_surface_files[0].name}...")
         ds_surf = xr.open_dataset(glorys_surface_files[0])
         if "depth" in ds_surf.dims:
             ds_surf = ds_surf.squeeze("depth", drop=True)
         ds_surf_reg = regrid_to_target(ds_surf)
         ds_surf_reg = align_time_coordinate(ds_surf_reg)
 
+    # 1b. SST: Check if high-resolution processed satellite SST covers the full period
+    sst_files = sorted(list((processed_dir / "sst").glob("*.nc")))
+    use_satellite_sst = False
+    if sst_files and ds_surf_reg is not None and len(sst_files) >= len(ds_surf_reg.time):
+        print(f"  [1b] Loading high-resolution processed SST ({len(sst_files)} files)...")
+        from src.utils.io import load_processed_variable
+        ds_sst = load_processed_variable("sst", processed_dir=processed_dir)
+        ds_sst = align_time_coordinate(ds_sst)
+        if "sst" in ds_sst:
+            surface_datasets.append(ds_sst[["sst"]])
+            use_satellite_sst = True
+            print("        ✅ Processed satellite SST loaded.")
+
+    if ds_surf_reg is not None:
         var_rename = {}
-        if "thetao" in ds_surf_reg and not any("sst" in d.data_vars for d in surface_datasets):
+        if "thetao" in ds_surf_reg and not use_satellite_sst:
             var_rename["thetao"] = "sst"
         if "zos" in ds_surf_reg:
             var_rename["zos"] = "ssh"
@@ -163,7 +167,7 @@ def harmonize_all_sources(
 
         if var_rename:
             ds_surf_reg = ds_surf_reg.rename(var_rename)
-        
+
         # Only keep standardized variables
         keep_vars = [v for v in ["sst", "ssh", "u_curr", "v_curr"] if v in ds_surf_reg]
         if keep_vars:
@@ -225,24 +229,39 @@ def harmonize_all_sources(
     if target_files:
         print(f"\n  [4] Processing GLORYS 3D Target Temperature from {target_files[0].name}...")
         ds_tgt = xr.open_dataset(target_files[0])
-        ds_tgt_reg = regrid_to_target(ds_tgt)
+        depth_dim = "depth" if "depth" in ds_tgt.dims else "deptht"
+
+        # 1D Vertical interpolation to exact target depth levels (bounded [0.0 to ~1062m])
+        print(f"        Interpolating vertically to exact depths: {TARGET_DEPTHS}")
+        native_depths = ds_tgt[depth_dim].values
+        if native_depths[0] > 0.0:
+            surface_slice = ds_tgt.isel({depth_dim: 0}).assign_coords({depth_dim: 0.0})
+            ds_tgt_padded = xr.concat([surface_slice, ds_tgt], dim=depth_dim)
+        else:
+            ds_tgt_padded = ds_tgt
+
+        ds_tgt_interp = ds_tgt_padded.interp(
+            {depth_dim: TARGET_DEPTHS},
+            method="linear"
+        )
+
+        # 2D Spatial regridding to target 0.25° grid
+        ds_tgt_reg = regrid_to_target(ds_tgt_interp)
         ds_tgt_reg = align_time_coordinate(ds_tgt_reg)
+        ds_tgt_reg = ds_tgt_reg.transpose("time", depth_dim, "lat", "lon")
 
-        depth_dim = "depth" if "depth" in ds_tgt_reg.dims else "deptht"
-        ds_tgt_depths = ds_tgt_reg.sel({depth_dim: TARGET_DEPTHS}, method="nearest")
-
-        validate_regridded_shape(ds_tgt_depths, "target_temp_regridded")
-        n_depths = len(ds_tgt_depths[depth_dim])
+        validate_regridded_shape(ds_tgt_reg, "target_temp_regridded")
+        n_depths = len(ds_tgt_reg[depth_dim])
         if n_depths != len(TARGET_DEPTHS):
             raise ValueError(f"Expected {len(TARGET_DEPTHS)} depth levels, got {n_depths}")
 
         out_tgt_path = processed_dir / "target_temp_regridded.nc"
-        if "time" in ds_tgt_depths.coords:
-            ds_tgt_depths["time"].encoding.clear()
-        ds_tgt_depths.to_netcdf(out_tgt_path)
+        if "time" in ds_tgt_reg.coords:
+            ds_tgt_reg["time"].encoding.clear()
+        ds_tgt_reg.to_netcdf(out_tgt_path)
         print(f"  ✅ Saved target file: {out_tgt_path}")
-        print(f"     Depth levels: {n_depths} levels extracted ({TARGET_DEPTHS})")
-        print(f"     Dimensions  : {dict(ds_tgt_depths.sizes)}")
+        print(f"     Depth levels: {n_depths} levels interpolated ({TARGET_DEPTHS})")
+        print(f"     Dimensions  : {dict(ds_tgt_reg.sizes)}")
 
     print("\n" + "=" * 65)
     print("  ✅ Harmonization & Regridding complete!")

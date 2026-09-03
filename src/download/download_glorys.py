@@ -41,7 +41,7 @@ def download_glorys_target(
     print("=" * 65)
     print(f"  Variable  : thetao (Potential Temperature)")
     print(f"  Region    : {LAT_MIN}°N–{LAT_MAX}°N, {LON_MIN}°E–{LON_MAX}°E")
-    print(f"  Depth     : 0.0 – 1000.0 m")
+    print(f"  Depth     : 0.0 – 1070.0 m (covers 1000m interpolation bound)")
     print(f"  Period    : {start_date} → {end_date}")
     print(f"  Output    : {output_dir / output_filename}")
     print()
@@ -56,7 +56,7 @@ def download_glorys_target(
         minimum_latitude=LAT_MIN,
         maximum_latitude=LAT_MAX,
         minimum_depth=0.0,
-        maximum_depth=1000.0,
+        maximum_depth=1070.0,
         output_filename=output_filename,
         output_directory=str(output_dir),
         username=user,
