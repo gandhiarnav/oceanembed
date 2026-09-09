@@ -1,5 +1,6 @@
 Absolutely. Here’s a **copy-paste context block** you can give your CLI agent. I’ll keep it focused on what we’ve actually decided/done, so it can pick up from here.
 
+
 ---
 
 # SIH Project — Data Pipeline Context
